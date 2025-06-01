@@ -1,5 +1,5 @@
 import numpy as np
-from queue import PriorityQueue
+from queue import PriorityQueue, Queue, LifoQueue
 from itertools import count
 import random
 
@@ -16,7 +16,6 @@ class Nodo:
 class Puzzle:
     def __init__(self):
         self.dimension = 3
-    
         self.fila = [1, 0, -1, 0]
         self.columna = [0, -1, 0, 1]
         self.direcciones = ["abajo", "izquierda", "arriba", "derecha"]
@@ -43,6 +42,59 @@ class Puzzle:
                     return i, j
         return -1, -1
 
+    def resolverAnchura(self, inicial, objetivo, x, y):
+        cola = Queue()
+        visitados = set()
+        raiz = Nodo(inicial, x, y, x, y, 0, None, None)
+        cola.put(raiz)
+        visitados.add(str(np.array(inicial)))
+
+        while not cola.empty():
+            nodo = cola.get()
+            if self.esObjetivo(nodo.matriz, objetivo):
+                self.imprimirCamino(nodo)
+                print(f"\nSolución encontrada en {nodo.nivel} movimientos.")
+                return
+            for i in range(4):
+                nuevoX = nodo.x + self.fila[i]
+                nuevoY = nodo.y + self.columna[i]
+                if self.esValido(nuevoX, nuevoY):
+                    movimiento = f"Mover 0 {self.direcciones[i]}"
+                    hijo = Nodo(nodo.matriz, nodo.x, nodo.y, nuevoX, nuevoY, nodo.nivel + 1, nodo, movimiento)
+                    estado = str(np.array(hijo.matriz))
+                    if estado not in visitados:
+                        cola.put(hijo)
+                        visitados.add(estado)
+        print("No se encontró una solución.")
+
+    def resolverProfundidad(self, inicial, objetivo, x, y):
+        MAX_PROFUNDIDAD = 100
+        pila = LifoQueue()
+        visitados = set()
+        raiz = Nodo(inicial, x, y, x, y, 0, None, None)
+        pila.put(raiz)
+        visitados.add(str(np.array(inicial)))
+
+        while not pila.empty():
+            nodo = pila.get()
+            if nodo.nivel > MAX_PROFUNDIDAD:
+                continue
+            if self.esObjetivo(nodo.matriz, objetivo):
+                self.imprimirCamino(nodo)
+                print(f"\nSolución encontrada en {nodo.nivel} movimientos.")
+                return
+            for i in range(4):
+                nuevoX = nodo.x + self.fila[i]
+                nuevoY = nodo.y + self.columna[i]
+                if self.esValido(nuevoX, nuevoY):
+                    movimiento = f"Mover 0 {self.direcciones[i]}"
+                    hijo = Nodo(nodo.matriz, nodo.x, nodo.y, nuevoX, nuevoY, nodo.nivel + 1, nodo, movimiento)
+                    estado = str(np.array(hijo.matriz))
+                    if estado not in visitados:
+                        pila.put(hijo)
+                        visitados.add(estado)
+        print("No se encontró una solución en un máximo de 100 movimientos.")
+
     def resolverAEstrella(self, inicial, objetivo, x, y):
         pq = PriorityQueue()
         visitados = set()
@@ -56,7 +108,7 @@ class Puzzle:
             _, _, nodo = pq.get()
             if self.esObjetivo(nodo.matriz, objetivo):
                 self.imprimirCamino(nodo)
-                print(f"\n Solución encontrada en {nodo.nivel} movimientos.")
+                print(f"\nSolución encontrada en {nodo.nivel} movimientos.")
                 return
             for i in range(4):
                 nuevoX = nodo.x + self.fila[i]
@@ -70,7 +122,7 @@ class Puzzle:
                         f = heuristica + hijo.nivel
                         pq.put((f, next(contador), hijo))
                         visitados.add(estado)
-        print(" No se encontró una solución.")
+        print("No se encontró una solución.")
 
     def esValido(self, x, y):
         return 0 <= x < self.dimension and 0 <= y < self.dimension
@@ -110,16 +162,30 @@ class Puzzle:
 
 if __name__ == "__main__":
     puzzle = Puzzle()
-
-    inicial = puzzle.generarTableroAleatorio()
     objetivo = [
         [1, 2, 3],
         [4, 5, 6],
         [7, 8, 0]
     ]
+    inicial = puzzle.generarTableroAleatorio()
     x, y = puzzle.encontrarPosicionCero(inicial)
 
     print(" Tablero inicial aleatorio:")
     puzzle.imprimirMatriz(inicial)
-    print("\n Resolviendo :")
-    puzzle.resolverAEstrella(inicial, objetivo, x, y)
+
+    print("\nSeleccione el tipo de búsqueda:")
+    print("1. Búsqueda por Anchura (BFS)")
+    print("2. Búsqueda por Profundidad (DFS, máx. 100 movimientos)")
+    print("3. Búsqueda Heurística A*")
+
+    opcion = input("Opción: ")
+
+    print("\nResolviendo...\n")
+    if opcion == "1":
+        puzzle.resolverAnchura(inicial, objetivo, x, y)
+    elif opcion == "2":
+        puzzle.resolverProfundidad(inicial, objetivo, x, y)
+    elif opcion == "3":
+        puzzle.resolverAEstrella(inicial, objetivo, x, y)
+    else:
+        print("Opción inválida.")
